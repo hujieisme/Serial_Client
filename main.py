@@ -36,7 +36,7 @@ class Plot_Widget(pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setYRange(0, 1)
-        self.setXRange(0, 10000)
+        self.setXRange(0, 32000)
         self.enableAutoRange('xy', False)
         self.setLabel('bottom', 'Points', units='/s')
         self.setLabel('left', 'Value', units='/3.3V')
@@ -94,7 +94,7 @@ class MainWindow(QMainWindow):
             curve9, p9, curve10, p10
 
         self.plot_page = QWidget()
-        data = np.zeros((10, 10000))
+        data = np.zeros((10, 32000))
         VL = QVBoxLayout()
         HL = QHBoxLayout()
         self.plot_page.setLayout(VL)
@@ -203,7 +203,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
                 if len(self.rx_buf) == 10:
                     self.rx += self.rx_buf
                 self.rx_buf = ''
-                if len(self.rx) == 5000:
+                if len(self.rx) == 4000:
                     # self.thread.exit()
                     self.thread.start()
             else:
@@ -223,10 +223,10 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         nums = self.rx.split()
         self.rx = ''
         nums = [int(x)/4096 for x in nums]
-        for i in range(250):
+        for i in range(400):
             data[0][i] = nums[2*i]
             data[1][i] = nums[2*i + 1]
-        data = np.roll(data, 9750, axis=1)
+        data = np.roll(data, 31600, axis=1)
         # data = np.flip(data)
         curve1.setData(data[0])
         curve2.setData(data[1])
