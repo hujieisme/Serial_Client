@@ -186,12 +186,6 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.thread.signal.connect(self.processing)
 
     def run(self):
-        global data
-        global curve1, p1, curve2, p2, \
-            curve3, p3, curve4, p4, \
-            curve5, p5, curve6, p6, \
-            curve7, p7, curve8, p8, \
-            curve9, p9, curve10, p10
         while True:
             self.mEvent.wait()
             self.mLock.acquire()
@@ -199,27 +193,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
                 while True:
                     char = UART.read(size=6000)
                     self.rx_buf = str(char, encoding="utf-8")
-
-                    self.rx_buf = self.rx_buf.partition('\r\n')[2]
-                    self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
-                    # self.rx_buf = self.rx_buf.replace('\r\n', '')
-                    # self.num += len(self.rx_buf)
-                    # print(self.num)
-                    nums = self.rx_buf.split()
-                    # print(len(nums))
-                    size = int(len(nums) / 2)
-                    # print(size)
-
-                    nums = [int(x) / 4096 for x in nums]
-                    for i in range(size):
-                        data[0][i] = nums[2 * i]
-                        data[1][i] = nums[2 * i + 1]
-                    data = np.roll(data, 32000 - size, axis=1)
-                    # data = np.flip(data)
-                    curve1.setData(data[0])
-                    curve2.setData(data[1])
-
-                    # self.thread.start()
+                    self.thread.start()
             else:
                 break
 
@@ -230,16 +204,23 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.mEvent.set()
 
     def processing(self):
-        global data, curve1, p1
+        global data
+        global curve1, p1, curve2, p2, \
+            curve3, p3, curve4, p4, \
+            curve5, p5, curve6, p6, \
+            curve7, p7, curve8, p8, \
+            curve9, p9, curve10, p10
 
         self.rx_buf = self.rx_buf.partition('\r\n')[2]
         self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
-        self.rx_buf = self.rx_buf.replace('\r\n', '')
+        # self.rx_buf = self.rx_buf.replace('\r\n', '')
         # self.num += len(self.rx_buf)
         # print(self.num)
         nums = self.rx_buf.split()
         # print(len(nums))
         size = int(len(nums)/2)
+        self.num += size*11
+        print(self.num)
         # print(size)
 
         nums = [int(x)/4096 for x in nums]
