@@ -116,7 +116,6 @@ class MainWindow(QMainWindow):
         global UART
         global RX_THREAD
 
-
         if not self.flag:
             self.flag = 1
             self.setting_page.pushButton_2.setText("关闭串口")
@@ -199,11 +198,26 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
             self.mLock.acquire()
             if UART.isOpen():
                 while True:
-                    char = UART.read(size=6000)
-                    self.rx_buf = str(char, encoding="utf-8")
+                    char = UART.read()
+                    if str(char, encoding="utf-8") == '\r':
+                        char = UART.read()
+                        break
+                    self.rx_buf += str(char, encoding="utf-8")
+                    # self.rx_buf += chr(char)
+                # print(self.rx_buf)
+                self.num += len(self.rx_buf)
+                print(self.num)
+                # gui.setting_page.textEdit.append(self.rx_buf)
+                if len(self.rx_buf) == 10:
+                    self.rx += self.rx_buf
+                self.rx_buf = ''
+                if len(self.rx) == 4000:
+                    # self.thread.exit()
                     self.thread.start()
             else:
                 break
+            self.mLock.release()
+            # print(self.rx)
 
     def pause(self):
         self.mEvent.clear()
@@ -212,31 +226,15 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.mEvent.set()
 
     def processing(self):
-        global data
-        global curve1, p1, curve2, p2, \
-            curve3, p3, curve4, p4, \
-            curve5, p5, curve6, p6, \
-            curve7, p7, curve8, p8, \
-            curve9, p9, curve10, p10
+        global data, curve1, p1
 
-        self.rx_buf = self.rx_buf.partition('\r\n')[2]
-        self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
-        # self.rx_buf = self.rx_buf.replace('\r\n', '')
-        # self.num += len(self.rx_buf)
-        # print(self.num)
-        nums = self.rx_buf.split()
-        # print(len(nums))
-        size = int(len(nums)/2)
-        self.num += size*11
-        print(self.num)
-        # print(size)
-
+        nums = self.rx.split()
+        self.rx = ''
         nums = [int(x)/4096 for x in nums]
-        # print(nums)
-        for i in range(size):
+        for i in range(400):
             data[0][i] = nums[2*i]
             data[1][i] = nums[2*i + 1]
-        data = np.roll(data, 32000 - size, axis=1)
+        data = np.roll(data, 31600, axis=1)
         # data = np.flip(data)
         curve1.setData(data[0])
         curve2.setData(data[1])
