@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 
 import PySide6QtAds as QtAds
 from qtpy import uic
@@ -20,6 +21,8 @@ import pyqtgraph as pg
 UI_FILE = os.path.join(os.path.dirname(__file__), 'MainWindow.ui')
 Setting_Page = os.path.join(os.path.dirname(__file__), 'setting_page.ui')
 Plot_Page = os.path.join(os.path.dirname(__file__), 'plot_page.ui')
+sys_platform = platform.platform().lower()
+
 
 global UART
 global RX_THREAD
@@ -119,9 +122,14 @@ class MainWindow(QMainWindow):
             self.setting_page.pushButton_2.setText("关闭串口")
             self.statusBar.showMessage("串口已关闭!", 3000)
             try:
-                UART = serial.Serial(str(self.coms[self.setting_page.comboBox.currentIndex()])[0:5],
-                                     int(self.setting_page.comboBox_2.currentText()),
-                                     timeout=0.2)
+                if "windows" in sys_platform:
+                    UART = serial.Serial(str(self.coms[self.setting_page.comboBox.currentIndex()])[0:5],
+                                         int(self.setting_page.comboBox_2.currentText()),
+                                         timeout=0.2)
+                if "macos" in sys_platform:
+                    UART = serial.Serial(str(self.coms[self.setting_page.comboBox.currentIndex()])[0:22],
+                                         int(self.setting_page.comboBox_2.currentText()),
+                                         timeout=0.2)
                 if UART.isOpen():
                     self.statusBar.showMessage("串口已成功打开!", 3000)
                     self.plot_page_show()
