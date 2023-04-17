@@ -2,18 +2,15 @@ import os
 import sys
 import platform
 
-import PySide6QtAds as QtAds
 from qtpy import uic
-from qtpy.QtUiTools import QUiLoader
-from qtpy.QtCore import Qt, QTimer, QThread, Signal
-from qtpy.QtGui import QCloseEvent, QFontDatabase, QIcon
+from qtpy.QtCore import QThread, Signal
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import *
 import qdarkstyle
 import serial
 
 import serial.tools.list_ports
 import threading
-import time
 
 import numpy as np
 import pyqtgraph as pg
@@ -235,7 +232,6 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
             data[0][i] = nums[2*i]
             data[1][i] = nums[2*i + 1]
         data = np.roll(data, 32000 - size, axis=1)
-        # data = np.flip(data)
         curve1.setData(data[0])
         curve2.setData(data[1])
 
