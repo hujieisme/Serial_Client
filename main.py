@@ -127,7 +127,7 @@ class MainWindow(QMainWindow):
                                          int(self.setting_page.comboBox_2.currentText()),
                                          timeout=0.2)
                 if "macos" in sys_platform:
-                    UART = serial.Serial(str(self.coms[self.setting_page.comboBox.currentIndex()])[0:22],
+                    UART = serial.Serial(str(self.coms[self.setting_page.comboBox.currentIndex()])[0:21],
                                          int(self.setting_page.comboBox_2.currentText()),
                                          timeout=0.2)
                 if UART.isOpen():
@@ -221,6 +221,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
 
         self.rx_buf = self.rx_buf.partition('\r\n')[2]
         self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
+        print(self.rx_buf)
         # self.rx_buf = self.rx_buf.replace('\r\n', '')
         # self.num += len(self.rx_buf)
         # print(self.num)
@@ -235,6 +236,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
                     nums[i] = nums[i - 2]
                 else:
                     nums[i] = nums[i - 2]
+
         nums = [int(x)/4096 for x in nums]
         size = int(len(nums) / 2)
         self.num += size*11
