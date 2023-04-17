@@ -39,7 +39,7 @@ class Plot_Widget(pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setYRange(0, 1)
-        self.setXRange(0, 36000)
+        self.setXRange(0, 32000)
         self.enableAutoRange('xy', False)
         self.setLabel('bottom', 'Points', units='/s')
         self.setLabel('left', 'Value', units='/3.3V')
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
             curve9, p9, curve10, p10
 
         self.plot_page = QWidget()
-        data = np.zeros((10, 36000))
+        data = np.zeros((10, 32000))
         VL = QVBoxLayout()
         HL = QHBoxLayout()
         self.plot_page.setLayout(VL)
@@ -221,32 +221,20 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
 
         self.rx_buf = self.rx_buf.partition('\r\n')[2]
         self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
-        print(self.rx_buf)
-        # self.rx_buf = self.rx_buf.replace('\r\n', '')
-        # self.num += len(self.rx_buf)
-        # print(self.num)
-        nums = self.rx_buf.split()
-        # print(nums)
-        # print(len(nums))
-
-        # print(size)
-        for i in range(len(nums)):
-            if len(nums[i]) != 4:
-                if i % 2 == 0:
-                    nums[i] = nums[i - 2]
-                else:
-                    nums[i] = nums[i - 2]
-
+        self.rx_buf = self.rx_buf.split('\r\n')
+        buf = ''
+        for x in self.rx_buf:
+            if len(x) == 10:
+                buf += x
+        nums = buf.split()
         nums = [int(x)/4096 for x in nums]
         size = int(len(nums) / 2)
-        self.num += size*11
+        self.num += size
         print(self.num)
-
-        # print(nums)
         for i in range(size):
             data[0][i] = nums[2*i]
             data[1][i] = nums[2*i + 1]
-        data = np.roll(data, 36000 - size, axis=1)
+        data = np.roll(data, 32000 - size, axis=1)
         # data = np.flip(data)
         curve1.setData(data[0])
         curve2.setData(data[1])
