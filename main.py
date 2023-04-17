@@ -39,7 +39,7 @@ class Plot_Widget(pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setYRange(0, 1)
-        self.setXRange(0, 32000)
+        self.setXRange(0, 36000)
         self.enableAutoRange('xy', False)
         self.setLabel('bottom', 'Points', units='/s')
         self.setLabel('left', 'Value', units='/3.3V')
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
             curve9, p9, curve10, p10
 
         self.plot_page = QWidget()
-        data = np.zeros((10, 32000))
+        data = np.zeros((10, 36000))
         VL = QVBoxLayout()
         HL = QHBoxLayout()
         self.plot_page.setLayout(VL)
@@ -115,6 +115,7 @@ class MainWindow(QMainWindow):
     def open_close_coms(self):
         global UART
         global RX_THREAD
+
 
         if not self.flag:
             self.flag = 1
@@ -198,26 +199,11 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
             self.mLock.acquire()
             if UART.isOpen():
                 while True:
-                    char = UART.read()
-                    if str(char, encoding="utf-8") == '\r':
-                        char = UART.read()
-                        break
-                    self.rx_buf += str(char, encoding="utf-8")
-                    # self.rx_buf += chr(char)
-                # print(self.rx_buf)
-                self.num += len(self.rx_buf)
-                print(self.num)
-                # gui.setting_page.textEdit.append(self.rx_buf)
-                if len(self.rx_buf) == 10:
-                    self.rx += self.rx_buf
-                self.rx_buf = ''
-                if len(self.rx) == 4000:
-                    # self.thread.exit()
+                    char = UART.read(size=4000)
+                    self.rx_buf = str(char, encoding="utf-8")
                     self.thread.start()
             else:
                 break
-            self.mLock.release()
-            # print(self.rx)
 
     def pause(self):
         self.mEvent.clear()
@@ -226,15 +212,39 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.mEvent.set()
 
     def processing(self):
-        global data, curve1, p1
+        global data
+        global curve1, p1, curve2, p2, \
+            curve3, p3, curve4, p4, \
+            curve5, p5, curve6, p6, \
+            curve7, p7, curve8, p8, \
+            curve9, p9, curve10, p10
 
-        nums = self.rx.split()
-        self.rx = ''
+        self.rx_buf = self.rx_buf.partition('\r\n')[2]
+        self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
+        # self.rx_buf = self.rx_buf.replace('\r\n', '')
+        # self.num += len(self.rx_buf)
+        # print(self.num)
+        nums = self.rx_buf.split()
+        # print(nums)
+        # print(len(nums))
+
+        # print(size)
+        for i in range(len(nums)):
+            if len(nums[i]) != 4:
+                if i % 2 == 0:
+                    nums[i] = nums[i - 2]
+                else:
+                    nums[i] = nums[i - 2]
         nums = [int(x)/4096 for x in nums]
-        for i in range(400):
+        size = int(len(nums) / 2)
+        self.num += size*11
+        print(self.num)
+
+        # print(nums)
+        for i in range(size):
             data[0][i] = nums[2*i]
             data[1][i] = nums[2*i + 1]
-        data = np.roll(data, 31600, axis=1)
+        data = np.roll(data, 36000 - size, axis=1)
         # data = np.flip(data)
         curve1.setData(data[0])
         curve2.setData(data[1])
