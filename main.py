@@ -55,8 +55,6 @@ class MainWindow(QMainWindow):
         self.flag = bool(0)
         self.flag_2 = bool(0)
         self.callBack = []
-        self.thread = ProcessingThread()
-        self.thread.signal.connect(self.reading)
         app = pg.mkQApp("Plotting Example")
         self.init_UI()
 
@@ -113,7 +111,6 @@ class MainWindow(QMainWindow):
         global UART
         global RX_THREAD
 
-
         if not self.flag:
             self.flag = 1
             self.setting_page.pushButton_2.setText("关闭串口")
@@ -135,7 +132,6 @@ class MainWindow(QMainWindow):
                     RX_THREAD.setDaemon(True)
                     RX_THREAD.start()
                     RX_THREAD.resume()
-                    
             except:
                 self.statusBar.showMessage("串口或被占用，打开失败", 3000)
         else:
@@ -168,10 +164,6 @@ class MainWindow(QMainWindow):
         self.pages_manager.setCurrentIndex(1)
         self.resize(800, 600)
 
-    def reading(self, value):
-        print("hello" + str(value))
-
-
 class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
     global gui
     global UART
@@ -183,12 +175,13 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.mLock = lock
         self.mEvent = threading.Event()
         self.rx_buf = ''
-        self.num = 0
-        self.callback = []
-        self.callback.append(gui.reading)
-        self.rx = ''
-        self.thread = ProcessingThread()
-        self.thread.signal.connect(self.processing)
+        self.nums = []
+        self.sum = 0
+        self.thread_process = ProcessingThread()
+        self.thread_process.signal.connect(self.processing)
+        self.thread_plot = ProcessingThread()
+        self.thread_plot.signal.connect(self.plotting)
+
 
     def run(self):
         while True:
@@ -197,8 +190,8 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
             if UART.isOpen():
                 while True:
                     char = UART.read(size=4000)
-                    self.rx_buf = str(char, encoding="utf-8")
-                    self.thread.start()
+                    self.rx_buf = char
+                    self.thread_process.start()
             else:
                 break
 
@@ -209,6 +202,20 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.mEvent.set()
 
     def processing(self):
+
+        self.rx_buf = self.rx_buf.partition(b'\r\n')[2]
+        self.rx_buf = self.rx_buf.rpartition(b'\r\n')[0]
+        self.rx_buf = self.rx_buf.split(b'\r\n')
+        self.nums = []
+        for x in self.rx_buf:
+            if len(x) == 4:
+                self.nums.append(x[0:2])
+                self.nums.append(x[2:4])
+        for i in range(len(self.nums)):
+            self.nums[i] = int.from_bytes(self.nums[i], byteorder='big')/4096
+        self.thread_plot.start()
+
+    def plotting(self):
         global data
         global curve1, p1, curve2, p2, \
             curve3, p3, curve4, p4, \
@@ -216,21 +223,12 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
             curve7, p7, curve8, p8, \
             curve9, p9, curve10, p10
 
-        self.rx_buf = self.rx_buf.partition('\r\n')[2]
-        self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
-        self.rx_buf = self.rx_buf.split('\r\n')
-        buf = ''
-        for x in self.rx_buf:
-            if len(x) == 10:
-                buf += x
-        nums = buf.split()
-        nums = [int(x)/4096 for x in nums]
-        size = int(len(nums) / 2)
-        self.num += size
-        print(self.num)
+        size = int(len(self.nums) / 2)
+        self.sum += size
+        print(self.sum)
         for i in range(size):
-            data[0][i] = nums[2*i]
-            data[1][i] = nums[2*i + 1]
+            data[0][i] = self.nums[2*i]
+            data[1][i] = self.nums[2*i + 1]
         data = np.roll(data, 32000 - size, axis=1)
         curve1.setData(data[0])
         curve2.setData(data[1])
