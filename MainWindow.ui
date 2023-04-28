@@ -27,6 +27,7 @@
    </attribute>
    <addaction name="action"/>
    <addaction name="action_2"/>
+   <addaction name="action_3"/>
   </widget>
   <action name="action">
    <property name="checkable">
@@ -47,6 +48,15 @@
    </property>
    <property name="text">
     <string>绘图</string>
+   </property>
+  </action>
+  <action name="action_3">
+   <property name="icon">
+    <iconset>
+     <normaloff>Run.svg</normaloff>Run.svg</iconset>
+   </property>
+   <property name="text">
+    <string>启动</string>
    </property>
   </action>
  </widget>
