@@ -33,7 +33,7 @@ class Plot_Widget(pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setYRange(0, 1)
-        self.setXRange(0, 32000)
+        self.setXRange(0, 2000)
         self.enableAutoRange('xy', False)
         self.setLabel('bottom', 'Points', units='/s')
         self.setLabel('left', 'Value', units='/3.3V')
@@ -54,6 +54,7 @@ class MainWindow(QMainWindow):
         self.flag = bool(0)
         self.flag_2 = bool(0)
         self.flag_3 = bool(0)
+        self.flag_hex = bool(0)
         self.channals_num = 2
         self.str2send = ''
         self.callBack = []
@@ -81,6 +82,7 @@ class MainWindow(QMainWindow):
         self.action_3.triggered.connect(self.start_MCU)
         self.setting_page.pushButton_7.clicked.connect(self.sendcommand)
         self.setting_page.pushButton_8.clicked.connect(self.set_channals)
+        self.setting_page.checkBox_11.stateChanged.connect(self.hexornot)
 
         self.pages_manager = QStackedWidget(self)
         self.pages_manager.addWidget(self.setting_page)
@@ -93,7 +95,7 @@ class MainWindow(QMainWindow):
         global p_list, curve_list
 
         self.plot_page = QWidget()
-        data = np.zeros((10, 32000))
+        data = np.zeros((10, 2000))
         self.VL = QVBoxLayout()
         self.HL = QHBoxLayout()
         self.plot_page.setLayout(self.VL)
@@ -189,7 +191,7 @@ class MainWindow(QMainWindow):
         # UART.send("START\r\n")
 
     def sendcommand(self):
-        print("hello")
+        print('OK')
 
     def set_channals(self):
         global data, UART
@@ -295,6 +297,19 @@ class MainWindow(QMainWindow):
         self.str2send += '\r\n'
         UART.write(self.str2send.encode('utf-8'))
 
+    def hexornot(self):
+        if self.setting_page.checkBox_11.isChecked():
+            self.str2send = 'HEX0'
+            self.str2send += '\r\n'
+            UART.write(self.str2send.encode('utf-8'))
+            self.flag_hex = 0
+        else:
+            self.str2send = 'HEX1'
+            self.str2send += '\r\n'
+            UART.write(self.str2send.encode('utf-8'))
+            self.flag_hex = 1
+
+
 class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
     global gui
     global UART
@@ -306,6 +321,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.mLock = lock
         self.mEvent = threading.Event()
         self.rx_buf = ''
+        self.rx_remain = ''
         self.nums = []
         self.sum = 0
         self.thread_process = ProcessingThread()
@@ -333,17 +349,37 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         self.mEvent.set()
 
     def processing(self):
-
-        self.rx_buf = self.rx_buf.partition(b'\r\n')[2]
-        self.rx_buf = self.rx_buf.rpartition(b'\r\n')[0]
-        self.rx_buf = self.rx_buf.split(b'\r\n')
-        self.nums = []
-        for x in self.rx_buf:
-            if len(x) == 2 * int(gui.channals_num):
-                for i in range(int(gui.channals_num)):
-                    self.nums.append(x[2 * i:2 * (i + 1)])
-        for i in range(len(self.nums)):
-            self.nums[i] = int.from_bytes(self.nums[i], byteorder='big')/4096
+        if gui.flag_hex:
+            if self.rx_remain == '':
+                self.rx_buf = self.rx_buf.partition(b'\r\n')[2]
+                self.rx_buf = self.rx_buf.rpartition(b'\r\n')[0]
+            else:
+                self.rx_buf = self.rx_remain + self.rx_buf
+                self.rx_buf, buf, self.rx_remain = self.rx_buf.rpartition(b'\r\n')
+            self.rx_buf = self.rx_buf.split(b'\r\n')
+            self.nums = []
+            for x in self.rx_buf:
+                if len(x) == 2 * int(gui.channals_num):
+                    for i in range(int(gui.channals_num)):
+                        self.nums.append(x[2 * i:2 * (i + 1)])
+            for i in range(len(self.nums)):
+                self.nums[i] = int.from_bytes(self.nums[i], byteorder='big')/4096
+        else:
+            self.rx_buf = str(self.rx_buf, encoding="utf-8")
+            if self.rx_remain == '':
+                self.rx_buf = self.rx_buf.partition('\r\n')[2]
+                self.rx_buf = self.rx_buf.rpartition('\r\n')[0]
+            else:
+                self.rx_buf = self.rx_remain + self.rx_buf
+                self.rx_buf, buf, self.rx_remain = self.rx_buf.rpartition('\r\n')
+            self.rx_buf = self.rx_buf.split('\r\n')
+            buf = ''
+            self.nums = []
+            for x in self.rx_buf:
+                if len(x) == 5 * int(gui.channals_num):
+                    buf += x
+            self.nums = buf.split()
+            self.nums = [int(x)/4096 for x in self.nums]
         self.thread_plot.start()
 
     def plotting(self):
@@ -356,7 +392,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         for i in range(size):
             for j in range(int(gui.channals_num)):
                 data[j][i] = self.nums[gui.channals_num * i + j]
-        data = np.roll(data, 32000 - size, axis=1)
+        data = np.roll(data, 2000 - size, axis=1)
         for i in range(int(gui.channals_num)):
             curve_list[i].setData(data[i])
 
