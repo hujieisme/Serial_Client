@@ -33,7 +33,7 @@ class Plot_Widget(pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setYRange(0, 1)
-        self.setXRange(0, 2000)
+        self.setXRange(0, 20000)
         self.enableAutoRange('xy', False)
         self.setLabel('bottom', 'Points', units='/s')
         self.setLabel('left', 'Value', units='/3.3V')
@@ -51,10 +51,11 @@ class MainWindow(QMainWindow):
         self.plot_page = None
         self.setting_page = None
         self.coms = None
+
         self.flag = bool(0)
         self.flag_2 = bool(0)
         self.flag_3 = bool(0)
-        self.flag_hex = bool(0)
+        self.flag_hex = bool(1)
         self.channals_num = 2
         self.str2send = ''
         self.callBack = []
@@ -95,7 +96,7 @@ class MainWindow(QMainWindow):
         global p_list, curve_list
 
         self.plot_page = QWidget()
-        data = np.zeros((10, 2000))
+        data = np.zeros((10, 20000))
         self.VL = QVBoxLayout()
         self.HL = QHBoxLayout()
         self.plot_page.setLayout(self.VL)
@@ -336,7 +337,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
             self.mLock.acquire()
             if UART.isOpen():
                 while True:
-                    char = UART.read(size=4000)
+                    char = UART.read(size=2000)
                     self.rx_buf = char
                     self.thread_process.start()
             else:
@@ -392,7 +393,7 @@ class UART_RX_TREAD(threading.Thread):  # 数据接收进程 部分重构
         for i in range(size):
             for j in range(int(gui.channals_num)):
                 data[j][i] = self.nums[gui.channals_num * i + j]
-        data = np.roll(data, 2000 - size, axis=1)
+        data = np.roll(data, 20000 - size, axis=1)
         for i in range(int(gui.channals_num)):
             curve_list[i].setData(data[i])
 
